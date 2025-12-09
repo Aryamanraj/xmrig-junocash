@@ -197,10 +197,15 @@ int64_t xmrig::Client::submit(const JobResult &result)
     const char *data  = result.result;
 #   else
     char *nonce = m_tempBuf.data();
-    char *data  = m_tempBuf.data() + 16;
-    char *signature = m_tempBuf.data() + 88;
+    char *data  = m_tempBuf.data() + 72;  // Juno: 32-byte nonce = 64 hex chars + null + padding
+    char *signature = m_tempBuf.data() + 144;
 
-    Cvt::toHex(nonce, sizeof(uint32_t) * 2 + 1, reinterpret_cast<const uint8_t *>(&result.nonce), sizeof(uint32_t));
+    // Juno uses 32-byte nonce; others use 4-byte
+    if (result.algorithm == Algorithm::RX_JUNO) {
+        Cvt::toHex(nonce, 64 + 1, result.nonce32(), 32);
+    } else {
+        Cvt::toHex(nonce, sizeof(uint32_t) * 2 + 1, reinterpret_cast<const uint8_t *>(&result.nonce), sizeof(uint32_t));
+    }
     Cvt::toHex(data, 65, result.result(), 32);
 
     if (result.minerSignature()) {

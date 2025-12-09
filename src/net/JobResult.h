@@ -53,6 +53,7 @@ public:
         diff(job.diff())
     {
         memcpy(m_result, result, sizeof(m_result));
+        memset(m_nonce32, 0, sizeof(m_nonce32));
 
         if (header_hash) {
             memcpy(m_headerHash, header_hash, sizeof(m_headerHash));
@@ -61,6 +62,27 @@ public:
         if (mix_hash) {
             memcpy(m_mixHash, mix_hash, sizeof(m_mixHash));
         }
+
+        if (miner_signature) {
+            m_hasMinerSignature = true;
+            memcpy(m_minerSignature, miner_signature, sizeof(m_minerSignature));
+        }
+    }
+
+    // Constructor for Juno 32-byte nonce
+    inline JobResult(const Job &job, const uint8_t *nonce32, const uint8_t *result, const uint8_t* miner_signature = nullptr) :
+        algorithm(job.algorithm()),
+        index(job.index()),
+        clientId(job.clientId()),
+        jobId(job.id()),
+        backend(job.backend()),
+        nonce(0),
+        diff(job.diff())
+    {
+        memcpy(m_result, result, sizeof(m_result));
+        memcpy(m_nonce32, nonce32, sizeof(m_nonce32));
+        memset(m_headerHash, 0, sizeof(m_headerHash));
+        memset(m_mixHash, 0, sizeof(m_mixHash));
 
         if (miner_signature) {
             m_hasMinerSignature = true;
@@ -77,6 +99,7 @@ public:
         nonce(0),
         diff(0)
     {
+        memset(m_nonce32, 0, sizeof(m_nonce32));
     }
 
     inline const uint8_t *result() const     { return m_result; }
@@ -84,6 +107,7 @@ public:
     inline uint8_t *result()                 { return m_result; }
     inline const uint8_t *headerHash() const { return m_headerHash; }
     inline const uint8_t *mixHash() const    { return m_mixHash; }
+    inline const uint8_t *nonce32() const    { return m_nonce32; }
 
     inline const uint8_t *minerSignature() const { return m_hasMinerSignature ? m_minerSignature : nullptr; }
 
@@ -99,6 +123,7 @@ private:
     uint8_t m_result[32]     = { 0 };
     uint8_t m_headerHash[32] = { 0 };
     uint8_t m_mixHash[32]    = { 0 };
+    uint8_t m_nonce32[32]    = { 0 };
 
     uint8_t m_minerSignature[64] = { 0 };
     bool m_hasMinerSignature = false;

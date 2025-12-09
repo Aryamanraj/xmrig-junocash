@@ -169,6 +169,11 @@ size_t xmrig::Job::nonceOffset() const
         return 147;
     }
 
+    // Juno: version(4) + prevhash(32) + merkle(32) + blockcommit(32) + time(4) + bits(4) = 108
+    if (algorithm() == Algorithm::RX_JUNO) {
+        return 108;
+    }
+
     return 39;
 }
 

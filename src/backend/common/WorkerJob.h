@@ -43,6 +43,7 @@ class WorkerJob
 public:
     inline const Job &currentJob() const    { return m_jobs[index()]; }
     inline uint32_t *nonce(size_t i = 0)    { return reinterpret_cast<uint32_t*>(blob() + (i * currentJob().size()) + nonceOffset()); }
+    inline uint8_t *nonce32(size_t i = 0)   { return blob() + (i * currentJob().size()) + nonceOffset(); }  // For Juno 32-byte nonce
     inline uint64_t sequence() const        { return m_sequence; }
     inline uint8_t *blob()                  { return m_blobs[index()]; }
     inline uint8_t index() const            { return m_index; }
@@ -122,6 +123,13 @@ template<>
 inline uint32_t *xmrig::WorkerJob<1>::nonce(size_t)
 {
     return reinterpret_cast<uint32_t*>(blob() + nonceOffset());
+}
+
+
+template<>
+inline uint8_t *xmrig::WorkerJob<1>::nonce32(size_t)
+{
+    return blob() + nonceOffset();
 }
 
 

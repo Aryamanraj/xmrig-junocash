@@ -267,8 +267,13 @@ void xmrig::CpuWorker<N>::start()
             }
 
             uint32_t current_job_nonces[N];
+            uint8_t current_job_nonces32[N][32];  // For Juno 32-byte nonce
+            const bool isJuno = (job.algorithm().id() == Algorithm::RX_JUNO);
             for (size_t i = 0; i < N; ++i) {
                 current_job_nonces[i] = readUnaligned(m_job.nonce(i));
+                if (isJuno) {
+                    memcpy(current_job_nonces32[i], m_job.nonce32(i), 32);
+                }
             }
 
 #           ifdef XMRIG_FEATURE_BENCHMARK
@@ -348,7 +353,11 @@ void xmrig::CpuWorker<N>::start()
                     else
 #                   endif
                     if (value < job.target()) {
-                        JobResults::submit(job, current_job_nonces[i], m_hash + (i * 32), job.hasMinerSignature() ? miner_signature_saved : nullptr);
+                        if (isJuno) {
+                            JobResults::submit(job, current_job_nonces32[i], m_hash + (i * 32), job.hasMinerSignature() ? miner_signature_saved : nullptr);
+                        } else {
+                            JobResults::submit(job, current_job_nonces[i], m_hash + (i * 32), job.hasMinerSignature() ? miner_signature_saved : nullptr);
+                        }
                     }
                 }
                 m_count += N;

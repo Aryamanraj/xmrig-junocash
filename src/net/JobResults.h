@@ -47,6 +47,7 @@ public:
     static void stop();
     static void submit(const Job &job, uint32_t nonce, const uint8_t *result);
     static void submit(const Job& job, uint32_t nonce, const uint8_t* result, const uint8_t* miner_signature);
+    static void submit(const Job& job, const uint8_t *nonce32, const uint8_t *result, const uint8_t* miner_signature);  // Juno 32-byte nonce
     static void submit(const JobResult &result);
 
 #   if defined(XMRIG_FEATURE_OPENCL) || defined(XMRIG_FEATURE_CUDA)

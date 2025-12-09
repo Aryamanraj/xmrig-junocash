@@ -1,0 +1,228 @@
+name: Build XMRig-Juno
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake libuv1-dev libssl-dev libhwloc-dev
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DWITH_HWLOC=OFF
+          make -j$(nproc)
+
+      - name: Create config.json
+        run: |
+          cat > build/config.json << 'EOF'
+          {
+              "autosave": true,
+              "cpu": true,
+              "opencl": false,
+              "cuda": false,
+              "pools": [
+                  {
+                      "url": "stratum+tcp://pool.junocash.io:4444",
+                      "user": "YOUR_JUNO_ADDRESS",
+                      "pass": "x",
+                      "algo": "rx/juno"
+                  }
+              ]
+          }
+          EOF
+
+      - name: Package Linux
+        run: |
+          cd build
+          tar -czvf xmrig-juno-linux-x64.tar.gz xmrig config.json
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmrig-juno-linux-x64
+          path: build/xmrig-juno-linux-x64.tar.gz
+
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install vcpkg and dependencies
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg install libuv:x64-windows openssl:x64-windows
+
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          cmake .. -G "Visual Studio 17 2022" -A x64 -DWITH_HWLOC=OFF -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows
+          cmake --build . --config Release
+
+      - name: Create config.json
+        run: |
+          @"
+          {
+              "autosave": true,
+              "cpu": true,
+              "opencl": false,
+              "cuda": false,
+              "pools": [
+                  {
+                      "url": "stratum+tcp://pool.junocash.io:4444",
+                      "user": "YOUR_JUNO_ADDRESS",
+                      "pass": "x",
+                      "algo": "rx/juno"
+                  }
+              ]
+          }
+          "@ | Out-File -FilePath build\Release\config.json -Encoding utf8
+
+      - name: Package Windows
+        run: |
+          cd build\Release
+          Compress-Archive -Path xmrig.exe,config.json -DestinationPath xmrig-juno-win-x64.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmrig-juno-win-x64
+          path: build/Release/xmrig-juno-win-x64.zip
+
+  build-macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          brew install cmake libuv openssl@3
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DWITH_HWLOC=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+          make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Create config.json
+        run: |
+          cat > build/config.json << 'EOF'
+          {
+              "autosave": true,
+              "cpu": true,
+              "opencl": false,
+              "cuda": false,
+              "pools": [
+                  {
+                      "url": "stratum+tcp://pool.junocash.io:4444",
+                      "user": "YOUR_JUNO_ADDRESS",
+                      "pass": "x",
+                      "algo": "rx/juno"
+                  }
+              ]
+          }
+          EOF
+
+      - name: Package macOS
+        run: |
+          cd build
+          tar -czvf xmrig-juno-macos-arm64.tar.gz xmrig config.json
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmrig-juno-macos-arm64
+          path: build/xmrig-juno-macos-arm64.tar.gz
+
+  build-macos-intel:
+    runs-on: macos-15-large
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          brew install cmake libuv openssl@3
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DWITH_HWLOC=OFF -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3)
+          make -j$(sysctl -n hw.logicalcpu)
+
+      - name: Create config.json
+        run: |
+          cat > build/config.json << 'EOF'
+          {
+              "autosave": true,
+              "cpu": true,
+              "opencl": false,
+              "cuda": false,
+              "pools": [
+                  {
+                      "url": "stratum+tcp://pool.junocash.io:4444",
+                      "user": "YOUR_JUNO_ADDRESS",
+                      "pass": "x",
+                      "algo": "rx/juno"
+                  }
+              ]
+          }
+          EOF
+
+      - name: Package macOS Intel
+        run: |
+          cd build
+          tar -czvf xmrig-juno-macos-x64.tar.gz xmrig config.json
+
+      - name: Upload macOS Intel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xmrig-juno-macos-x64
+          path: build/xmrig-juno-macos-x64.tar.gz
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-linux, build-windows, build-macos, build-macos-intel]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/xmrig-juno-linux-x64/xmrig-juno-linux-x64.tar.gz
+            artifacts/xmrig-juno-win-x64/xmrig-juno-win-x64.zip
+            artifacts/xmrig-juno-macos-x64/xmrig-juno-macos-x64.tar.gz
+            artifacts/xmrig-juno-macos-arm64/xmrig-juno-macos-arm64.tar.gz
+          generate_release_notes: true

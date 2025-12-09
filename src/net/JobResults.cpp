@@ -345,6 +345,12 @@ void xmrig::JobResults::submit(const Job& job, uint32_t nonce, const uint8_t* re
 }
 
 
+void xmrig::JobResults::submit(const Job& job, const uint8_t *nonce32, const uint8_t *result, const uint8_t* miner_signature)
+{
+    submit(JobResult(job, nonce32, result, miner_signature));
+}
+
+
 void xmrig::JobResults::submit(const JobResult &result)
 {
     assert(handler != nullptr);
