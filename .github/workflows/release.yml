@@ -1,0 +1,38 @@
+name: Create Release from Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+      run_id:
+        description: 'Actions run ID to get artifacts from (find in URL of successful build)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download artifacts from run
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          run-id: ${{ github.event.inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List artifacts
+        run: find artifacts -type f
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          files: |
+            artifacts/xmrig-juno-linux-x64/xmrig-juno-linux-x64.tar.gz
+            artifacts/xmrig-juno-win-x64/xmrig-juno-win-x64.zip
+            artifacts/xmrig-juno-macos-arm64/xmrig-juno-macos-arm64.tar.gz
+          generate_release_notes: true
